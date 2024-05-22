@@ -15,7 +15,7 @@ import { CloudViewIntervalSelect } from '../shared/IntervalSelect';
 import { CloudViewRegionSelect } from '../shared/RegionSelect';
 import { CloudViewMultiResourceSelect } from '../shared/ResourceMultiSelect';
 import { CloudViewResourceTypes } from '../shared/ResourceSelect';
-import { CloudViewTimeRangeSelect } from '../shared/TimeRangeSelect';
+import { CloudPulseTimeRangeSelect } from '../shared/TimeRangeSelect';
 
 export const GlobalFilters = React.memo((props: GlobalFilterProperties) => {
   const [time, setTimeBox] = React.useState<WithStartAndEnd>({
@@ -29,9 +29,14 @@ export const GlobalFilters = React.memo((props: GlobalFilterProperties) => {
 
   const [apiTimeDuration, setApiTimeDuration] = React.useState<TimeDuration>();
 
+  const [
+    apiTimeDurationLabel,
+    setApiTimeDurationLabel,
+  ] = React.useState<string>();
+
   const [selectedRegion, setRegion] = React.useState<string>();
 
-  const [selectedResourceId, setResourceId] = React.useState<any>();
+  const [selectedResourceId, setResourceId] = React.useState<any>([]);
 
   const [selectedDashboard, setDashboard] = React.useState<
     Dashboard | undefined
@@ -51,10 +56,12 @@ export const GlobalFilters = React.memo((props: GlobalFilterProperties) => {
     globalFilters.timeRange = time;
     globalFilters.step = apiGranularity;
     globalFilters.duration = apiTimeDuration;
+    globalFilters.timeRangeLabel = apiTimeDurationLabel!;
     props.handleAnyFilterChange(globalFilters);
   };
 
   React.useEffect(() => {
+    console.log(props.aclpPreferences);
     emitGlobalFilterChange();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
@@ -73,10 +80,12 @@ export const GlobalFilters = React.memo((props: GlobalFilterProperties) => {
   const handleTimeRangeChange = (
     start: number,
     end: number,
-    timeDuration?: TimeDuration
+    timeDuration?: TimeDuration,
+    timeRangeLabel: string
   ) => {
     console.log('TimeRange: ', start, end);
     setTimeBox({ end, start });
+    setApiTimeDurationLabel(timeRangeLabel);
     if (timeDuration) {
       setApiTimeDuration(timeDuration);
     }
@@ -94,14 +103,16 @@ export const GlobalFilters = React.memo((props: GlobalFilterProperties) => {
   };
 
   const handleResourceChange = (resourceId: any[]) => {
+    if(resourceId && resourceId.length > 0) {
     console.log('Resource ID: ', resourceId);
-    setResourceId(resourceId.map((obj) => obj.label));
+    setResourceId(resourceId.map((obj) => obj.id));}
   };
 
   const handleDashboardChange = (dashboard: Dashboard | undefined) => {
     console.log('Selected Dashboard: ', dashboard);
     setDashboard(dashboard);
     setService(dashboard?.service_type);
+    setRegion(undefined);
   };
 
   const convertIntervalToGranularity = (interval: string | undefined) => {
@@ -131,29 +142,35 @@ export const GlobalFilters = React.memo((props: GlobalFilterProperties) => {
         <Grid sx={{ width: 300 }}>
           <CloudViewDashboardSelect
             handleDashboardChange={handleDashboardChange}
+            preferredOption={props.aclpPreferences?.aclp_config.dashboard_id}
           />
         </Grid>
         <Grid sx={{ marginLeft: 2, width: 200 }}>
           <StyledCloudViewRegionSelect
             handleRegionChange={handleRegionChange}
+            preferredRegionId={props.aclpPreferences?.aclp_config?.region?.id}
           />
         </Grid>
-        <Grid sx={{ marginLeft: 3, width: 250 }}>
+        <Grid sx={{ marginLeft: 3, width: 450 }}>
           <StyledCloudViewResourceSelect
             disabled={!selectedService}
             handleResourceChange={handleResourceChange}
             region={selectedRegion}
+            resourceIds={[1, 2, 57352521]}
             resourceType={selectedService}
           />
         </Grid>
         <Grid sx={{ marginLeft: 5 }}>
           <StyledCloudViewIntervalSelect
             handleIntervalChange={handleIntervalChange}
+            defaultValue={
+              props.aclpPreferences?.aclp_config.aggregation_interval
+            }
           />
         </Grid>
         <Grid sx={{ marginLeft: 12, width: 250 }}>
           <StyledCloudViewTimeRangeSelect
-            defaultValue={'Past 30 Minutes'}
+            defaultValue={props.aclpPreferences?.aclp_config.time_duration}
             handleStatsChange={handleTimeRangeChange}
             hideLabel
             label="Select Time Range"
@@ -173,20 +190,20 @@ const StyledCloudViewRegionSelect = styled(CloudViewRegionSelect, {
 const StyledCloudViewResourceSelect = styled(CloudViewMultiResourceSelect, {
   label: 'StyledCloudViewResourceSelect',
 })({
-  width: 100,
+  width: 230,
 });
 
-const StyledCloudViewTimeRangeSelect = styled(CloudViewTimeRangeSelect, {
+const StyledCloudViewTimeRangeSelect = styled(CloudPulseTimeRangeSelect, {
   label: 'StyledCloudViewTimeRangeSelect',
 })({
-  width: 150,
+  width: 140,
 });
 
 const StyledCloudViewIntervalSelect = styled(CloudViewIntervalSelect, {
   label: 'StyledCloudViewIntervalSelect',
 })({
   marginRight: 10,
-  width: 40,
+  width: 20,
 });
 
 const StyledGrid = styled(Grid, { label: 'StyledGrid' })(({ theme }) => ({

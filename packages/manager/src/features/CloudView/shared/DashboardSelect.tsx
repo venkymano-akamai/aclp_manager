@@ -4,11 +4,14 @@ import * as React from 'react';
 
 import { Autocomplete } from 'src/components/Autocomplete/Autocomplete';
 import { Box } from 'src/components/Box';
+import { CircleProgress } from 'src/components/CircleProgress';
+import Select from 'src/components/EnhancedSelect/Select';
 import { Typography } from 'src/components/Typography';
 import { useCloudViewDashboardsQuery } from 'src/queries/cloudview/dashboards';
 
 export interface CloudViewDashbboardSelectProps {
   handleDashboardChange: (dashboard: Dashboard | undefined) => void;
+  preferredOption?: number;
 }
 
 export const CloudViewDashboardSelect = React.memo(
@@ -21,9 +24,19 @@ export const CloudViewDashboardSelect = React.memo(
 
     const errorText: string = error ? 'Error loading dashboards' : '';
 
+    const preferredDashboard = () => {
+      const preferredOption = dashboardsList?.data.find(
+        (dashboard: Dashboard) => dashboard.id === props.preferredOption
+      );
+      if (preferredOption) {
+        props.handleDashboardChange(preferredOption);
+      }
+      return preferredOption;
+    };
+
     const [selectedDashboard, setDashboard] = React.useState<
       Dashboard | undefined
-    >();
+    >(preferredDashboard());
 
     React.useEffect(() => {
       props.handleDashboardChange(selectedDashboard);
@@ -37,11 +50,21 @@ export const CloudViewDashboardSelect = React.memo(
       );
     };
 
+    if (isLoading) {
+      return (
+        <Select
+          isClearable={true}
+          // eslint-disable-next-line @typescript-eslint/no-empty-function
+          onChange={() => {}}
+          placeholder="Select a Dashboard"
+        />
+      );
+    }
     return (
       <Autocomplete
         onChange={(_: any, dashboard: Dashboard) => {
           setDashboard(dashboard);
-          //   props.handleDashboardChange(dashboard);
+          // props.handleDashboardChange(dashboard);
         }}
         options={
           !dashboardsList ? [] : getSortedDashboardsList(dashboardsList.data)
@@ -59,9 +82,10 @@ export const CloudViewDashboardSelect = React.memo(
         )}
         autoHighlight
         // defaultValue={selectedDashboard}
-
         clearOnBlur
         data-testid="cloudview-dashboard-select"
+        // defaultValue={props.preferredOption ? getPrefferedBoard() : undefined}
+        defaultValue={preferredDashboard()}
         errorText={errorText}
         fullWidth
         groupBy={(option: Dashboard) => option.service_type}

@@ -557,14 +557,14 @@ const cloudView = [
     // );
   }),
 
-  rest.post('*/monitor/service/*/metrics', async (req, res, ctx) => {
+  rest.post('*/monitors/service/*/metrics', async (req, res, ctx) => {
     await sleep(1000);
     const data = getMetricsResponse(req.body);
     return res(ctx.json(data));
   }),
 
   // dashboards
-  rest.get('*/monitor/dashboards', async (req, res, ctx) => {
+  rest.get('*/monitors/dashboards', async (req, res, ctx) => {
     await sleep(100); // this is to test out loading feature
     // TODO, decide how to work on widgets and filters (for now keeping static ones)
     // return res(ctx.json(makeResourcePage(dashboardFactory.buildList(10))))
@@ -575,7 +575,84 @@ const cloudView = [
             created: '2023-07-12T16:08:53',
             id: req.params.id,
             label: 'Akamai Global Dashboard',
-            service_type: 'linodes',
+            service_type: 'linode',
+            time_duration: {
+              unit: 'hr',
+              value: 1,
+            },
+            time_granularity: {
+              unit: 'sec',
+              value: 1,
+            },
+            updated: '2023-07-12T16:08:53',
+            widgets: [
+              {
+                aggregate_function: 'avg',
+                chart_type: 'line',
+                color: 'blue',
+                filters: [],
+                group_by: '',
+                label: 'CPU',
+                metric: 'system_memory_usage_bytes',
+                namespace_id: 1,
+                region_id: 1,
+                service_type: 'ACLB',
+                size: 12,
+                unit: '%',
+                y_label: 'count',
+              },
+              {
+                aggregate_function: 'avg',
+                chart_type: 'line',
+                color: 'red',
+                filters: [],
+                group_by: '',
+                label: 'HTTP_400',
+                metric: 'system_network_io_bytes_total',
+                namespace_id: 1,
+                region_id: 1,
+                service_type: 'ACLB',
+                size: 6,
+                unit: '%',
+                y_label: 'count',
+              },
+              {
+                aggregate_function: 'avg',
+                chart_type: 'line',
+                color: 'yellow',
+                filters: [],
+                group_by: '',
+                label: 'HTTP_500',
+                metric: 'system_cpu_utilization_ratio',
+                namespace_id: 1,
+                region_id: 1,
+                service_type: 'ACLB',
+                size: 6,
+                unit: '%',
+                y_label: 'count',
+              },
+              {
+                aggregate_function: 'avg',
+                chart_type: 'line',
+                color: 'green',
+                filters: [],
+                group_by: '',
+                label: 'Network',
+                metric: 'system_disk_operations_total',
+                namespace_id: 1,
+                region_id: 1,
+                service_type: 'ACLB',
+                size: 6,
+                unit: 'Kb/s',
+                y_label: 'count',
+              },
+            ],
+          },
+          {
+            created: '2023-07-12T16:08:53',
+            id: req.params.id,
+            label: 'ACLB Dashboard',
+            service_type: 'aclb',
             time_duration: {
               unit: 'hr',
               value: 1,
@@ -648,6 +725,60 @@ const cloudView = [
               },
             ],
           },
+          {
+            created: 'Thu, 18 Apr 2024 05:31:58 GMT',
+            id: 2,
+            label: '1stLinodeDashboad',
+            service_type: 'linode',
+            type: 'standard',
+            updated: null,
+            widgets: [
+              {
+                aggregate_function: 'avg',
+                chart_type: 'line',
+                color: 'blue',
+                label: 'CPU utilization ratio',
+                metric: 'system_cpu_utilization_ratio',
+                service_type: 'linode',
+                size: 12,
+                unit: 'percent',
+                y_label: 'system_cpu_utilization_ratio',
+              },
+              {
+                aggregate_function: 'avg',
+                chart_type: 'line',
+                color: 'red',
+                label: 'Bytes of memory in use',
+                metric: 'system_memory_usage_bytes',
+                service_type: 'linode',
+                size: 12,
+                unit: 'byte',
+                y_label: 'system_memory_usage_bytes',
+              },
+              {
+                aggregate_function: 'avg',
+                chart_type: 'line',
+                color: 'green',
+                label: 'Number of bytes transmitted and received',
+                metric: 'system_network_io_bytes_total',
+                service_type: 'linode',
+                size: 6,
+                unit: 'bits_per_second',
+                y_label: 'system_network_io_bytes_total',
+              },
+              {
+                aggregate_function: 'avg',
+                chart_type: 'line',
+                color: 'yellow',
+                label: 'Disk operations count',
+                metric: 'system_disk_operations_total',
+                service_type: 'linode',
+                size: 6,
+                unit: 'rate',
+                y_label: 'system_disk_operations_total',
+              },
+            ],
+          },
         ])
       )
     );
@@ -675,7 +806,7 @@ const cloudView = [
             {
               aggregate_function: 'sum',
               chart_type: 'line',
-              color: 'lightred',
+              color: 'blue',
               filters: [],
               group_by: '',
               label: 'HTTP_200',
@@ -689,7 +820,7 @@ const cloudView = [
             {
               aggregate_function: 'sum',
               chart_type: 'line',
-              color: 'skyblue',
+              color: 'red',
               filters: [],
               group_by: '',
               label: 'HTTP_400',
@@ -703,7 +834,7 @@ const cloudView = [
             {
               aggregate_function: 'sum',
               chart_type: 'line',
-              color: 'skyblue',
+              color: 'yellow',
               filters: [],
               group_by: '',
               label: 'HTTP_500',
@@ -717,7 +848,7 @@ const cloudView = [
             {
               aggregate_function: 'sum',
               chart_type: 'line',
-              color: 'lightgreen',
+              color: 'green',
               filters: [],
               group_by: '',
               label: 'HTTP_401',
@@ -789,6 +920,12 @@ const cloudView = [
         ],
       })
     );
+  }),
+  rest.post('*/monitorss/service/linode/token', (req, res, ctx) => {
+    return res(ctx.json({ token: 'testlinodetoken' }));
+  }),
+  rest.post('*/monitorss/service/aclb/token', (req, res, ctx) => {
+    return res(ctx.json({ token: 'testaclbtoken' }));
   }),
 ];
 
@@ -1028,10 +1165,268 @@ export const handlers = [
           return (filteredById || filteredByRegion) ?? linodes;
         });
 
-        return res(ctx.json(makeResourcePage(filteredLinodes)));
+        // return res(ctx.json(makeResourcePage(filteredLinodes)));
       }
     }
-    return res(ctx.json(makeResourcePage(linodes)));
+    // Use these Linode IDs to test using actual APIs
+    return res(
+      ctx.json(
+        makeResourcePage([
+          {
+            alerts: {
+              cpu: 10,
+              io: 10000,
+              network_in: 0,
+              network_out: 0,
+              transfer_quota: 80,
+            },
+            backups: {
+              enabled: false,
+              last_successful: '2020-01-01',
+              schedule: {
+                day: 'Scheduling',
+                window: 'Scheduling',
+              },
+            },
+            created: '2020-01-01',
+            group: '',
+            hypervisor: 'kvm',
+            id: 57352521,
+            image: 'linode/debian10',
+            ipv4: ['000.000.000.000'],
+            ipv6: '2600:3c00::f03c:92ff:fee2:6c40/64',
+            label: 'linode-19',
+            placement_group: {
+              affinity_type: 'anti_affinity',
+              id: 1,
+              is_compliant: false,
+              is_strict: true,
+              label: 'pg-1',
+              linodes: [
+                {
+                  is_compliant: true,
+                  linode: 1,
+                },
+                {
+                  is_compliant: true,
+                  linode: 2,
+                },
+                {
+                  is_compliant: true,
+                  linode: 3,
+                },
+                {
+                  is_compliant: true,
+                  linode: 5,
+                },
+                {
+                  is_compliant: true,
+                  linode: 6,
+                },
+                {
+                  is_compliant: true,
+                  linode: 7,
+                },
+                {
+                  is_compliant: true,
+                  linode: 8,
+                },
+                {
+                  is_compliant: true,
+                  linode: 9,
+                },
+                {
+                  is_compliant: false,
+                  linode: 43,
+                },
+              ],
+              region: 'us-east',
+            },
+            region: 'us-east',
+            specs: {
+              disk: 51200,
+              gpus: 0,
+              memory: 2048,
+              transfer: 2000,
+              vcpus: 1,
+            },
+            status: 'running',
+            tags: [],
+            type: 'g6-standard-1',
+            updated: '2020-01-01',
+            watchdog_enabled: true,
+          },
+          {
+            alerts: {
+              cpu: 10,
+              io: 10000,
+              network_in: 0,
+              network_out: 0,
+              transfer_quota: 80,
+            },
+            backups: {
+              enabled: true,
+              last_successful: '2020-01-01',
+              schedule: {
+                day: 'Scheduling',
+                window: 'Scheduling',
+              },
+            },
+            created: '2020-01-01',
+            group: '',
+            hypervisor: 'kvm',
+            id: 57407248,
+            image: 'metadata-test-image',
+            ipv4: ['50.116.6.212', '192.168.203.1'],
+            ipv6: '2600:3c00::f03c:92ff:fee2:6c40/64',
+            label: 'metadata-test-image',
+            placement_group: {
+              affinity_type: 'anti_affinity',
+              id: 1,
+              is_compliant: false,
+              is_strict: true,
+              label: 'pg-1',
+              linodes: [
+                {
+                  is_compliant: true,
+                  linode: 1,
+                },
+                {
+                  is_compliant: true,
+                  linode: 2,
+                },
+                {
+                  is_compliant: true,
+                  linode: 3,
+                },
+                {
+                  is_compliant: true,
+                  linode: 5,
+                },
+                {
+                  is_compliant: true,
+                  linode: 6,
+                },
+                {
+                  is_compliant: true,
+                  linode: 7,
+                },
+                {
+                  is_compliant: true,
+                  linode: 8,
+                },
+                {
+                  is_compliant: true,
+                  linode: 9,
+                },
+                {
+                  is_compliant: false,
+                  linode: 43,
+                },
+              ],
+              region: 'us-east',
+            },
+            region: 'us-east',
+            specs: {
+              disk: 51200,
+              gpus: 0,
+              memory: 2048,
+              transfer: 2000,
+              vcpus: 1,
+            },
+            status: 'running',
+            tags: [],
+            type: 'g6-standard-1',
+            updated: '2020-01-01',
+            watchdog_enabled: true,
+          },
+          {
+            alerts: {
+              cpu: 10,
+              io: 10000,
+              network_in: 0,
+              network_out: 0,
+              transfer_quota: 80,
+            },
+            backups: {
+              enabled: true,
+              last_successful: '2020-01-01',
+              schedule: {
+                day: 'Scheduling',
+                window: 'Scheduling',
+              },
+            },
+            created: '2020-01-01',
+            group: '',
+            hypervisor: 'kvm',
+            id: 44777,
+            image: 'metadata-test-image',
+            ipv4: ['50.116.6.212', '192.168.203.1'],
+            ipv6: '2600:3c00::f03c:92ff:fee2:6c40/64',
+            label: 'test_linode',
+            placement_group: {
+              affinity_type: 'anti_affinity',
+              id: 1,
+              is_compliant: false,
+              is_strict: true,
+              label: 'pg-1',
+              linodes: [
+                {
+                  is_compliant: true,
+                  linode: 1,
+                },
+                {
+                  is_compliant: true,
+                  linode: 2,
+                },
+                {
+                  is_compliant: true,
+                  linode: 3,
+                },
+                {
+                  is_compliant: true,
+                  linode: 5,
+                },
+                {
+                  is_compliant: true,
+                  linode: 6,
+                },
+                {
+                  is_compliant: true,
+                  linode: 7,
+                },
+                {
+                  is_compliant: true,
+                  linode: 8,
+                },
+                {
+                  is_compliant: true,
+                  linode: 9,
+                },
+                {
+                  is_compliant: false,
+                  linode: 43,
+                },
+              ],
+              region: 'us-east',
+            },
+            region: 'us-east',
+            specs: {
+              disk: 51200,
+              gpus: 0,
+              memory: 2048,
+              transfer: 2000,
+              vcpus: 1,
+            },
+            status: 'running',
+            tags: [],
+            type: 'g6-standard-1',
+            updated: '2020-01-01',
+            watchdog_enabled: true,
+          }
+        ])
+      )
+    );
   }),
   rest.get('*/linode/instances/:id', async (req, res, ctx) => {
     const id = Number(req.params.id);

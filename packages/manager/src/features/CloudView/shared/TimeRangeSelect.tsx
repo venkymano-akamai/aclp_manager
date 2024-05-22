@@ -15,19 +15,25 @@ interface Props
   handleStatsChange?: (
     start: number,
     end: number,
-    timeDuration: TimeDuration
+    timeDuration: TimeDuration,
+    timeRangeLabel: string
   ) => void;
 }
+
+const _PAST_7_DAYS = 'Past 7 Days';
+const _PAST_12_HOURS = 'Past 12 Hours';
+const _PAST_24_HOURS = 'Past 24 Hours';
+const _PAST_30_DAYS = 'Past 30 Days';
+const _PAST_30_MINUTES = 'Past 30 Minutes';
 
 export type Labels =
   | 'Past 7 Days'
   | 'Past 12 Hours'
   | 'Past 24 Hours'
   | 'Past 30 Days'
-  | 'Past 30 Minutes'
-  | 'Past Year';
+  | 'Past 30 Minutes';
 
-export const CloudViewTimeRangeSelect = React.memo((props: Props) => {
+export const CloudPulseTimeRangeSelect = React.memo((props: Props) => {
   const { defaultValue, handleStatsChange, ...restOfSelectProps } = props;
 
   /*
@@ -43,13 +49,34 @@ export const CloudViewTimeRangeSelect = React.memo((props: Props) => {
     is a valid time window.
   */
   const [selectedTimeRange, setTimeRange] = React.useState<Labels>(
-    'Past 30 Minutes'
+    defaultValue ?? 'Past 30 Minutes'
   );
 
-  const [apiTimeDuration, setApiTimeDuration] = React.useState<TimeDuration>({
-    unit: 'min',
-    value: 30,
-  });
+  const getTimeDurationFromTimeRange = (label: string) => {
+    if (label == _PAST_30_MINUTES) {
+      return { unit: 'min', value: 30 };
+    }
+
+    if (label == _PAST_24_HOURS) {
+      return { unit: 'hr', value: 24 };
+    }
+
+    if (label == _PAST_12_HOURS) {
+      return { unit: 'hr', value: 12 };
+    }
+
+    if (label == _PAST_7_DAYS) {
+      return { unit: 'day', value: 7 };
+    }
+
+    if (label == _PAST_30_DAYS) {
+      return { unit: 'day', value: 30 };
+    }
+  };
+
+  const [apiTimeDuration, setApiTimeDuration] = React.useState<TimeDuration>(
+    getTimeDurationFromTimeRange(defaultValue!)!
+  );
 
   /*
     Why division by 1000?
@@ -66,20 +93,16 @@ export const CloudViewTimeRangeSelect = React.memo((props: Props) => {
     // but the calcs to turn that into start/end numbers live here)
     if (!!handleStatsChange) {
       handleStatsChange(
-        Math.round(
-          generateStartTime(
-            selectedTimeRange,
-            nowInSeconds,
-            new Date().getFullYear()
-          )
-        ),
+        Math.round(generateStartTime(selectedTimeRange, nowInSeconds)),
         Math.round(nowInSeconds),
-        apiTimeDuration
+        apiTimeDuration,
+        selectedTimeRange
       );
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [apiTimeDuration]);
 
-  const options = generateSelectOptions(`${new Date().getFullYear()}`);
+  const options = generateSelectOptions();
 
   const handleChange = (item: Item<Labels, Labels>) => {
     setTimeRange(item.value);
@@ -87,28 +110,24 @@ export const CloudViewTimeRangeSelect = React.memo((props: Props) => {
   };
 
   const setTimeDurationFromTimeRange = (label: string) => {
-    if (label == 'Past 30 Minutes') {
+    if (label == _PAST_30_MINUTES) {
       setApiTimeDuration({ unit: 'min', value: 30 });
     }
 
-    if (label == 'Past 24 Hours') {
+    if (label == _PAST_24_HOURS) {
       setApiTimeDuration({ unit: 'hr', value: 24 });
     }
 
-    if (label == 'Past 12 Hours') {
+    if (label == _PAST_12_HOURS) {
       setApiTimeDuration({ unit: 'hr', value: 12 });
     }
 
-    if (label == 'Past 7 Days') {
-      setApiTimeDuration({ unit: 'days', value: 7 });
+    if (label == _PAST_7_DAYS) {
+      setApiTimeDuration({ unit: 'day', value: 7 });
     }
 
-    if (label == 'Past 30 Days') {
-      setApiTimeDuration({ unit: 'days', value: 30 });
-    }
-
-    if (label == 'Past Year') {
-      setApiTimeDuration({ unit: 'days', value: 365 });
+    if (label == _PAST_30_DAYS) {
+      setApiTimeDuration({ unit: 'day', value: 30 });
     }
   };
 
@@ -133,9 +152,7 @@ export const CloudViewTimeRangeSelect = React.memo((props: Props) => {
  *
  * @param { string } currentYear - the current year
  */
-export const generateSelectOptions = (
-  currentYear: string
-): Item<Labels, Labels>[] => {
+export const generateSelectOptions = (): Item<Labels, Labels>[] => {
   const baseOptions: Item<Labels, Labels>[] = [
     {
       label: 'Past 30 Minutes',
@@ -161,14 +178,6 @@ export const generateSelectOptions = (
       label: 'Past 30 Days',
       value: 'Past 30 Days',
     },
-    {
-      label: 'Past Year',
-      value: 'Past Year',
-    },
-    {
-      label: `${currentYear}` as Labels,
-      value: `${currentYear}` as Labels,
-    },
   ];
 };
 
@@ -176,11 +185,7 @@ export const generateSelectOptions = (
  *
  * @returns start time in seconds (NOT milliseconds)
  */
-export const generateStartTime = (
-  modifier: Labels,
-  nowInSeconds: number,
-  currentYear: number
-) => {
+export const generateStartTime = (modifier: Labels, nowInSeconds: number) => {
   switch (modifier) {
     case 'Past 30 Minutes':
       return nowInSeconds - 30 * 60;
@@ -190,11 +195,7 @@ export const generateStartTime = (
       return nowInSeconds - 24 * 60 * 60;
     case 'Past 7 Days':
       return nowInSeconds - 7 * 24 * 60 * 60;
-    case 'Past 30 Days':
-      return nowInSeconds - 30 * 24 * 60 * 60;
-    case 'Past Year':
-      return nowInSeconds - 365 * 24 * 60 * 60;
     default:
-      return new Date(`Jan 1 ${currentYear}`).getTime() / 1000;
+      return nowInSeconds - 30 * 24 * 60 * 60;
   }
 };

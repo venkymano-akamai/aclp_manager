@@ -1,4 +1,4 @@
-import { Dashboard, Widgets } from '@linode/api-v4';
+import { Dashboard, GetJWETokenPayload, Widgets } from '@linode/api-v4';
 import { Paper } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import Grid from '@mui/material/Unstable_Grid2';
@@ -6,22 +6,56 @@ import * as React from 'react';
 
 import CloudViewIcon from 'src/assets/icons/entityIcons/cv_overview.svg';
 import { Placeholder } from 'src/components/Placeholder/Placeholder';
+import { useCloudViewJWEtokenQuery } from 'src/queries/cloudview/dashboards';
+import {
+  useLinodeResourcesQuery,
+  useLoadBalancerResourcesQuery,
+} from 'src/queries/cloudview/resources';
 
 import { FiltersObject } from '../Models/GlobalFilterProperties';
 import {
   CloudViewWidget,
   CloudViewWidgetProperties,
 } from '../Widget/CloudViewWidget';
+import { AclpWidgetPreferences } from '../Models/UserPreferences';
 
 export interface DashboardProperties {
   dashbaord: Dashboard; // this will be done in upcoming sprint
   dashboardFilters: FiltersObject;
+  widgetPreferences: AclpWidgetPreferences[]
 
   // on any change in dashboard
   onDashboardChange: (dashboard: Dashboard) => void;
 }
 
 export const CloudPulseDashboard = (props: DashboardProperties) => {
+  const resourceOptions: any = {};
+
+  // returns a list of resource IDs to be passed as part of getJWEToken call
+  const getResourceIDsPayload = () => {
+    const jweTokenPayload: GetJWETokenPayload = {
+      resource_id: [],
+    };
+    jweTokenPayload.resource_id = resourceOptions[
+      props?.dashbaord?.service_type
+    ]?.data?.map((resource: any) => resource.id);
+    return jweTokenPayload;
+  };
+
+  ({ data: resourceOptions['linode'] } = useLinodeResourcesQuery(
+    props?.dashbaord?.service_type === 'linode'
+  ));
+
+  ({ data: resourceOptions['aclb'] } = useLoadBalancerResourcesQuery(
+    props?.dashbaord?.service_type === 'aclb'
+  ));
+
+  const { data: jweToken, isError, isSuccess } = useCloudViewJWEtokenQuery(
+    props?.dashbaord?.service_type,
+    getResourceIDsPayload(),
+    resourceOptions[props?.dashbaord?.service_type] ? true : false
+  );
+
   // todo define a proper properties class
 
   const [
@@ -30,6 +64,20 @@ export const CloudPulseDashboard = (props: DashboardProperties) => {
   ] = React.useState<CloudViewWidgetProperties>(
     {} as CloudViewWidgetProperties
   );
+
+  // React.useEffect(()=>{
+  //     if(props.widgetPreferences){
+  //       props.dashbaord?.widgets?.forEach((widget)=>{
+  //           const updatedWidget = {...widget};
+  //           const prefWidget = props?.widgetPreferences?.find((element)=> element.label === updatedWidget.label )
+
+  //           if(prefWidget){
+  //             updatedWidget.size = prefWidget.size;
+  //             handleWidgetChange(updatedWidget);
+  //           }
+  //       });
+  //     }
+  // }, [props.widgetPreferences, props.dashbaord?.widgets])
 
   React.useEffect(() => {
     // set as dashboard filter
@@ -40,9 +88,29 @@ export const CloudPulseDashboard = (props: DashboardProperties) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props.dashboardFilters]); // execute every time when there is dashboardFilters change
 
+  const StyledErrorState = styled(Placeholder, {
+    label: 'StyledErrorState',
+  })({
+    height: '100%',
+  });
+
+  if (isError) {
+    return (
+      <Paper style={{ height: '100%' }}>
+        <StyledErrorState title="Failed to get jwe token" />
+      </Paper>
+    );
+  }
+
   const getCloudViewGraphProperties = (widget: Widgets) => {
     const graphProp: CloudViewWidgetProperties = {} as CloudViewWidgetProperties;
     graphProp.widget = { ...widget };
+
+    const widgetPref  = props.widgetPreferences?.find((element) => element.label === graphProp.widget.label);
+    if(widgetPref){
+      graphProp.widget.size = widgetPref.size;
+    }
+
     graphProp.globalFilters = props.dashboardFilters;
     graphProp.unit = widget.unit ? widget.unit : '%';
     graphProp.ariaLabel = widget.label;
@@ -52,7 +120,15 @@ export const CloudPulseDashboard = (props: DashboardProperties) => {
   };
 
   const handleWidgetChange = (widget: Widgets) => {
-    widget.color = 'black'; // todo, add functionality here
+    const dashboard = { ...props.dashbaord };
+
+    const index = dashboard.widgets.findIndex(
+      (obj) => obj.label === widget.label
+    );
+
+    dashboard.widgets[index] = { ...widget };
+
+    props.onDashboardChange(dashboard);
   };
 
   const RenderWidgets = () => {
@@ -62,16 +138,18 @@ export const CloudPulseDashboard = (props: DashboardProperties) => {
         props.dashbaord?.service_type &&
         cloudViewGraphProperties.globalFilters?.region &&
         cloudViewGraphProperties.globalFilters?.resource &&
-        cloudViewGraphProperties.globalFilters?.resource.length > 0
+        cloudViewGraphProperties.globalFilters?.resource.length > 0 &&
+        jweToken?.token
       ) {
         return (
           <Grid columnSpacing={1.5} container rowSpacing={0} spacing={2}>
             {props.dashbaord.widgets.map((element, index) => {
-              if (element && element != undefined) {
+              if (element) {
                 return (
                   <CloudViewWidget
                     key={index}
                     {...getCloudViewGraphProperties(element)}
+                    authToken={jweToken?.token}
                     handleWidgetChange={handleWidgetChange}
                     useColorIndex={colorIndex++} // todo, remove the color index
                   />

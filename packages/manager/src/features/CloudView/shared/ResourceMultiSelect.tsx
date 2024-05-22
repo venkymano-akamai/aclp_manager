@@ -2,6 +2,7 @@
 import * as React from 'react';
 
 import { Autocomplete } from 'src/components/Autocomplete/Autocomplete';
+import Select from 'src/components/EnhancedSelect/Select';
 import {
   useLinodeResourcesQuery,
   useLoadBalancerResourcesQuery,
@@ -11,6 +12,7 @@ interface CloudViewResourceSelectProps {
   disabled: boolean;
   handleResourceChange: (resource: any) => void;
   region: string | undefined;
+  resourceIds?: number[];
   resourceType: string | undefined;
 }
 
@@ -18,9 +20,6 @@ export const CloudViewMultiResourceSelect = (
   props: CloudViewResourceSelectProps
 ) => {
   const resourceOptions: any = {};
-
-  const [selectedResource, setResource] = React.useState<any>([]);
-  const [resourceInputValue, setResourceInputValue] = React.useState('');
 
   const filterResourcesByRegion = (resourcesList: any[]) => {
     return resourcesList?.filter((resource: any) => {
@@ -45,13 +44,29 @@ export const CloudViewMultiResourceSelect = (
       : [];
   };
 
-  ({ data: resourceOptions['linodes'] } = useLinodeResourcesQuery(
-    props.resourceType === 'linodes'
+  ({ data: resourceOptions['linode'] } = useLinodeResourcesQuery(
+    props.resourceType === 'linode'
   ));
-  ({ data: resourceOptions['ACLB'] } = useLoadBalancerResourcesQuery(
-    props.resourceType === 'ACLB'
+  ({ data: resourceOptions['aclb'] } = useLoadBalancerResourcesQuery(
+    props.resourceType === 'aclb'
   ));
 
+  const prefResourceIds = localStorage.getItem('resources') ? JSON.parse(localStorage.getItem('resources')!).map(
+    (resource: any) => resource.id
+  ): [];
+  const getPreferredResources = () => {
+    const preferredResources = getResourceList().filter((resource: any) =>
+      prefResourceIds?.includes(resource.id)
+    );
+    // if (preferredResources) setResource([...preferredResources]);
+    console.log(preferredResources);
+    return preferredResources;
+  };
+
+  const [selectedResource, setResource] = React.useState<any>([]);
+
+  console.log(selectedResource);
+  const [resourceInputValue, setResourceInputValue] = React.useState('');
   React.useEffect(() => {
     props.handleResourceChange(selectedResource);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -62,18 +77,34 @@ export const CloudViewMultiResourceSelect = (
     setResourceInputValue('');
     props.handleResourceChange([]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [props.region, props.resourceType]);
+  }, [props.resourceType, props.region]);
 
+  if (!resourceOptions['linode']) {
+    return (
+      <Select
+        isClearable={true}
+        // eslint-disable-next-line @typescript-eslint/no-empty-function
+        onChange={() => {}}
+        placeholder="Select resources"
+      />
+    );
+  }
   return (
     <Autocomplete
       onChange={(_: any, resource: any) => {
         setResource(resource);
+        // console.log('resources:', resource);
+        localStorage.setItem('resources', JSON.stringify(resource));
       }}
       onInputChange={(event, newInputValue) => {
         setResourceInputValue(newInputValue);
+        setResource(newInputValue);
+        // console.log('resources:', resource);
+        localStorage.setItem('resources', JSON.stringify(newInputValue));
       }}
       autoHighlight
       clearOnBlur
+      // defaultValue={getResourceList()}
       disabled={props.disabled}
       inputValue={resourceInputValue}
       isOptionEqualToValue={(option, value) => option.label === value.label}
@@ -82,7 +113,12 @@ export const CloudViewMultiResourceSelect = (
       multiple
       options={getResourceList()}
       placeholder="Select a resource"
-      value={selectedResource}
+      value={getPreferredResources()}
+      onMouseMove={() => {
+        // setResourceInputValue(newInputValue);
+        setResource(getPreferredResources());
+        // console.log('resources:', resource);
+      }}
     />
   );
 };

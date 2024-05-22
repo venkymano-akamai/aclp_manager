@@ -12,6 +12,7 @@ import React from 'react';
 import { CircleProgress } from 'src/components/CircleProgress';
 import { useCloudViewMetricsQuery } from 'src/queries/cloudview/metrics';
 import { useProfile } from 'src/queries/profile';
+import { isToday as _isToday } from 'src/utilities/isToday';
 import { roundTo } from 'src/utilities/roundTo';
 import { getMetrics } from 'src/utilities/statMetrics';
 
@@ -20,10 +21,13 @@ import { CloudViewLineGraph } from './CloudViewLineGraph';
 import { ZoomIcon } from './Components/Zoomer';
 import { seriesDataFormatter } from './Formatters/CloudViewFormatter';
 import { COLOR_MAP } from './Utils/WidgetColorPalettes';
+import { useMutatePreferences, usePreferences } from 'src/queries/preferences';
+import { AclpWidgetPreferences } from '../Models/UserPreferences';
 
 export interface CloudViewWidgetProperties {
   // we can try renaming this CloudViewWidget
   ariaLabel?: string;
+  authToken: string;
   errorLabel?: string; // error label can come from dashboard
   globalFilters?: FiltersObject; // this is dashboard level global filters, its also optional
   // any change in the current widget, call and pass this function and handle in parent component
@@ -36,61 +40,94 @@ export interface CloudViewWidgetProperties {
 }
 
 export const CloudViewWidget = (props: CloudViewWidgetProperties) => {
+
+  const aclpWidgetPreferenceRef = React.useRef<AclpWidgetPreferences[]>();
+  const { data: preferences, refetch: refetchPreferences } = usePreferences();
+  const { mutateAsync: updatePreferences } = useMutatePreferences();
+
   const { data: profile } = useProfile();
 
   const timezone = profile?.timezone || 'US/Eastern';
 
   const [data, setData] = React.useState<Array<any>>([]);
 
-  const [legendRows] = React.useState<any[]>([]);
+  const [legendRows, setLegendRows] = React.useState<any[]>([]);
 
   const [error, setError] = React.useState<boolean>(false);
 
   const [widget, setWidget] = React.useState<Widgets>({ ...props.widget }); // any change in agg_functions, step, group_by, will be published to dashboard component for save
 
   const theme = useTheme();
-
-  const getShowToday = () => {
-    if (props.globalFilters) {
-      return (
-        (props.globalFilters?.timeRange.start -
-          props.globalFilters?.timeRange.end) /
-          3600 <=
-        24
+  React.useEffect(() => {
+    // localStorage.setItem('aclp_config', JSON.stringify(aclpPreference));
+    // Todo, make an API call
+    if (preferences && preferences.aclpWidgetPreferenceRef) {
+      aclpWidgetPreferenceRef.current = JSON.parse(
+        JSON.stringify(preferences.aclpWidgetPreferenceRef)
       );
-    } else {
-      // take from widgets itself
-      return false;
+    }
+  }, [preferences]);
+  const handleAclpPreferenceChange = () => {
+    // localStorage.setItem('aclp_config', JSON.stringify(aclpPreference));
+    // Todo, make an API call
+    if (
+      aclpWidgetPreferenceRef.current != undefined &&
+      (aclpWidgetPreferenceRef.current.length !=0)
+    ) {
+      refetchPreferences()
+        .then(({ data: response }) => response ?? Promise.reject())
+        .then((response) => {
+          updatePreferences({
+            ...response,
+            aclpWidgetPreferenceRef,
+          });
+        })
+        .catch();
     }
   };
+
+
+  // const getShowToday = () => {
+  //   if (props.globalFilters) {
+  //     return (
+  //       (props.globalFilters?.timeRange.start -
+  //         props.globalFilters?.timeRange.end) /
+  //         3600 <=
+  //       24
+  //     );
+  //   } else {
+  //     // take from widgets itself
+  //     return false;
+  //   }
+  // };
 
   const getCloudViewMetricsRequest = (): CloudViewMetricsRequest => {
     const request = {} as CloudViewMetricsRequest;
     request.aggregate_function = widget.aggregate_function;
     request.group_by = widget.group_by;
     if (props.globalFilters) {
-      request.instance_id = props.globalFilters.resource!;
+      request.resource_id = props.globalFilters.resource!;
     } else {
-      request.instance_id = widget.resource_id;
+      request.resource_id = widget.resource_id;
     }
     request.metric = widget.metric!;
-    request.duration = props.globalFilters
+    request.time_duration = props.globalFilters
       ? props.globalFilters.duration!
       : widget.time_duration;
-    request.step = props.globalFilters
+    request.time_granularity = props.globalFilters
       ? props.globalFilters.step!
       : widget.time_granularity; // todo, move to widgets
 
-    if (props.globalFilters) {
-      // this has been kept because for mocking data, we will remove this
-      request.startTime = props.globalFilters?.timeRange.start;
-      request.endTime = props.globalFilters?.timeRange.end;
-    }
+    // if (props.globalFilters) {
+    //   // this has been kept because for mocking data, we will remove this
+    //   request.startTime = props.globalFilters?.timeRange.start;
+    //   request.endTime = props.globalFilters?.timeRange.end;
+    // }
     return request;
   };
 
   const tooltipValueFormatter = (value: number, unit: string) =>
-    `${roundTo(value)}${unit}`;
+    `${roundTo(value)} ${unit}`;
 
   const getServiceType = () => {
     return props.widget.serviceType
@@ -98,6 +135,18 @@ export const CloudViewWidget = (props: CloudViewWidgetProperties) => {
       : props.globalFilters
       ? props.globalFilters.serviceType
       : '';
+  };
+
+  const getWidgetPrefrences = (currentWidgetPrefs: any, sizest: number) => {
+    if (!currentWidgetPrefs) return [];
+    console.log("widget prefs", currentWidgetPrefs);
+    let tempWidgets = currentWidgetPrefs.filter((obj: any) => obj.label!=widget.label);
+    tempWidgets.push({
+      label: widget.label,
+      size: sizest
+    });
+    console.log("tempwidgets",tempWidgets);
+    return tempWidgets;
   };
 
   const {
@@ -112,6 +161,15 @@ export const CloudViewWidget = (props: CloudViewWidgetProperties) => {
   ); // fetch the metrics on any property change
 
   React.useEffect(() => {
+    // refetchPreferences()
+    //     .then(({ data: response }) => response ?? Promise.reject())
+    //     .then((response) => {
+    //       updatePreferences({
+    //         ...response,
+    //         aclpWidgetPreferenceRef,
+    //       });
+    //     })
+    //     .catch();
     // on any change in the widget object, just publish the changes to parent component using a callback function
     props.handleWidgetChange(widget);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -123,6 +181,7 @@ export const CloudViewWidget = (props: CloudViewWidgetProperties) => {
    */
   React.useEffect(() => {
     const dimensions: any[] = [];
+    const legendRowsData: any[] = [];
 
     // for now we will use this guy, but once we decide how to work with coloring, it should be dynamic
     const colors: string[] = COLOR_MAP.get(props.widget.color)!;
@@ -135,36 +194,35 @@ export const CloudViewWidget = (props: CloudViewWidgetProperties) => {
         if (graphData == undefined || graphData == null) {
           return;
         }
+        const color = colors[index];
         const dimension = {
-          backgroundColor: colors[index],
-          borderColor: colors[index++],
+          backgroundColor: color,
+          borderColor: color,
           data: seriesDataFormatter(
             graphData.values,
-            props.globalFilters && props.globalFilters.timeRange
-              ? props.globalFilters.timeRange.start
-              : 0,
-            props.globalFilters && props.globalFilters.timeRange
-              ? props.globalFilters.timeRange.end
-              : 0
+            props.globalFilters?.timeRange.start,
+            props.globalFilters?.timeRange.end
           ),
-          label: graphData.metric.state,
+          label: graphData.metric.LINODE_ID
+            ? graphData.metric.LINODE_ID
+            : props.widget.label + ' (' + props.widget.unit + ')',
         };
 
         // construct a legend row with the dimension
         const legendRow = {
           data: getMetrics(dimension.data as number[][]),
-          // format: widget.unit == '%' ? formatPercentage : formatNumber,
           format: (value: number) => tooltipValueFormatter(value, widget.unit),
-          legendColor: dimension.backgroundColor,
+          legendColor: color,
           legendTitle: dimension.label,
         };
-
-        legendRows.push(legendRow);
+        legendRowsData.push(legendRow);
         dimensions.push(dimension);
+        index = index + 1;
       });
 
       // chart dimensions
       setData(dimensions);
+      setLegendRows(legendRowsData);
     }
 
     if (status == 'error') {
@@ -176,14 +234,26 @@ export const CloudViewWidget = (props: CloudViewWidgetProperties) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status, metricsList]);
 
-  if (isLoading || (status == 'success' && data.length == 0)) {
-    return <CircleProgress />;
+  if (isLoading) {
+    return (
+      <Grid xs={widget.size}>
+        <Paper style={{ height: '98%', width: '100%' }}>
+          <div style={{ margin: '1%' }}>
+            <CircleProgress />
+          </div>
+        </Paper>
+      </Grid>
+    );
   }
 
   const handleZoomToggle = (zoomInValue: boolean) => {
     setWidget((widget) => {
       return { ...widget, size: zoomInValue ? 12 : 6 };
     });
+    aclpWidgetPreferenceRef.current = getWidgetPrefrences(aclpWidgetPreferenceRef.current.current, 
+      zoomInValue ? 12 : 6 
+    );
+    handleAclpPreferenceChange();
   };
 
   const handleAggregateFunctionChange = (aggregateValue: string) => {
@@ -206,6 +276,16 @@ export const CloudViewWidget = (props: CloudViewWidgetProperties) => {
     // todo, add implementation
   };
 
+  const getWidgetSize = () => {
+    if (preferences?.aclpWidgetPreferenceRef){
+      let index = preferences.aclpWidgetPreferenceRef.current.findIndex((obj) => obj.label == widget.label);
+      if (index > -1) {
+        return preferences.aclpWidgetPreferenceRef.current[index].size;
+      }
+    }
+    return widget.size;
+  };
+
   const StyledZoomIcon = styled(ZoomIcon, {
     label: 'StyledZoomIcon',
   })({
@@ -215,14 +295,17 @@ export const CloudViewWidget = (props: CloudViewWidgetProperties) => {
     marginTop: '10px',
   });
 
+  if (!preferences) {
+    return <></>;
+  }
   return (
-    <Grid xs={widget.size}>
+    <Grid xs={getWidgetSize()}>
       <Paper style={{ height: '98%', width: '100%' }}>
         {/* add further components like group by resource, aggregate_function, step here , for sample added zoom icon here*/}
         <div className={widget.metric} style={{ margin: '1%' }}>
           <StyledZoomIcon
             handleZoomToggle={handleZoomToggle}
-            zoomIn={widget.size == 12 ? true : false}
+            zoomIn={getWidgetSize() == 12 ? true : false}
           />
           <CloudViewLineGraph // rename where we have cloudview to cloudpulse
             error={
@@ -232,18 +315,24 @@ export const CloudViewWidget = (props: CloudViewWidgetProperties) => {
                   : 'Error while rendering widget'
                 : undefined
             }
+            showToday={_isToday(
+              props.globalFilters?.timeRange.start
+                ? props.globalFilters.timeRange.start
+                : 0,
+              props.globalFilters?.timeRange.end
+                ? props.globalFilters.timeRange.end
+                : 0
+            )}
             ariaLabel={props.ariaLabel ? props.ariaLabel : ''}
             data={data}
-            gridSize={props.widget.size}
+            gridSize={getWidgetSize()}
             legendRows={legendRows}
             loading={isLoading}
             nativeLegend={true}
-            showToday={getShowToday()}
             subtitle={props.unit}
-            suggestedMax={10}
             timezone={timezone}
             title={props.widget.label}
-            unit={props.unit}
+            unit={' ' + props.unit}
           />
         </div>
       </Paper>
