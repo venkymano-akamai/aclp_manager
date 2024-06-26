@@ -4,8 +4,12 @@ import * as React from 'react';
 
 import { RegionSelect } from 'src/components/RegionSelect/RegionSelect';
 import { useRegionsQuery } from 'src/queries/regions';
-import { fetchUserPrefObject, updateGlobalFilterPreference } from '../Utils/UserPreference'
+
 import { REGION, RESOURCES } from '../Utils/CloudPulseConstants';
+import {
+  fetchUserPrefObject,
+  updateGlobalFilterPreference,
+} from '../Utils/UserPreference';
 
 export interface CloudViewRegionSelectProps {
   handleRegionChange: (region: string | undefined) => void;
@@ -24,15 +28,17 @@ export const CloudViewRegionSelect = React.memo(
     };
 
     if (!props.selectedDashboard || !regions) {
-      return <RegionSelect
-        handleSelection={(value) => { }}
-        currentCapability={undefined}
-        noMarginTop
-        fullWidth
-        label=""
-        regions={[]}
-        selectedId={""}
-      />
+      return (
+        <RegionSelect
+          currentCapability={undefined}
+          fullWidth
+          handleSelection={(value) => {}}
+          label=""
+          noMarginTop
+          regions={[]}
+          selectedId={''}
+        />
+      );
     }
 
     return (

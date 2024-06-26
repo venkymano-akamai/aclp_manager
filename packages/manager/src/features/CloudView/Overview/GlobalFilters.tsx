@@ -14,20 +14,26 @@ import { CloudViewDashboardSelect } from '../shared/DashboardSelect';
 import { CloudViewRegionSelect } from '../shared/RegionSelect';
 import { CloudViewMultiResourceSelect } from '../shared/ResourceMultiSelect';
 import { CloudPulseTimeRangeSelect } from '../shared/TimeRangeSelect';
-import { REFRESH, REGION, RESOURCES, TIME_DURATION } from '../Utils/CloudPulseConstants';
+import {
+  REFRESH,
+  REGION,
+  RESOURCES,
+  TIME_DURATION,
+} from '../Utils/CloudPulseConstants';
 import { updateGlobalFilterPreference } from '../Utils/UserPreference';
 
 export const GlobalFilters = React.memo((props: GlobalFilterProperties) => {
-  const emitGlobalFilterChange = (
-    updatedData: any,
-    changedFilter: string
-  ) => {
+  const emitGlobalFilterChange = (updatedData: any, changedFilter: string) => {
     props.handleAnyFilterChange(updatedData, changedFilter);
   };
 
-  const [selectedDashboard, setSelectedDashboard] = React.useState<Dashboard | undefined>();
+  const [selectedDashboard, setSelectedDashboard] = React.useState<
+    Dashboard | undefined
+  >();
 
-  const [selectedRegion, setSelectedRegion] = React.useState<string | undefined>();
+  const [selectedRegion, setSelectedRegion] = React.useState<
+    string | undefined
+  >();
 
   const handleTimeRangeChange = React.useCallback(
     (
@@ -58,15 +64,9 @@ export const GlobalFilters = React.memo((props: GlobalFilterProperties) => {
     emitGlobalFilterChange(region, REGION);
   }, []);
 
-  const handleResourceChange = React.useCallback(
-    (resourceId: any[]) => {
-      emitGlobalFilterChange(
-        resourceId?.map((obj) => obj.id) ?? [],
-        RESOURCES
-      );
-    },
-    []
-  );
+  const handleResourceChange = React.useCallback((resourceId: any[]) => {
+    emitGlobalFilterChange(resourceId?.map((obj) => obj.id) ?? [], RESOURCES);
+  }, []);
 
   const handleDashboardChange = React.useCallback(
     (dashboard: Dashboard | undefined) => {
@@ -81,30 +81,24 @@ export const GlobalFilters = React.memo((props: GlobalFilterProperties) => {
   );
 
   const handleGlobalRefresh = React.useCallback(() => {
-    emitGlobalFilterChange(
-      Date.now(),
-      REFRESH
-    );
+    emitGlobalFilterChange(Date.now(), REFRESH);
   }, []);
   return (
     <Grid container sx={{ ...itemSpacing, padding: '8px' }}>
       <StyledGrid xs={12}>
         <Grid sx={{ width: 300 }}>
           <CloudViewDashboardSelect
-
             handleDashboardChange={handleDashboardChange}
           />
         </Grid>
         <Grid sx={{ marginLeft: 4, width: 200 }}>
           <StyledCloudViewRegionSelect
-
             handleRegionChange={handleRegionChange}
             selectedDashboard={selectedDashboard}
           />
         </Grid>
         <Grid sx={{ marginLeft: 4, width: 450 }}>
           <StyledCloudViewResourceSelect
-
             disabled={!selectedRegion || !selectedDashboard?.service_type}
             handleResourceChange={handleResourceChange}
             region={selectedRegion}

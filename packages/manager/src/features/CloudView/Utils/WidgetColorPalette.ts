@@ -71,8 +71,39 @@ export const PINK = [
   '#A80F5480',
 ];
 
+export const DEFAULT = [
+  // thick colors from each...
+  '#4067E580',
+  '#FE993380',
+  '#12A59480',
+  '#AB4ABA80',
+  '#D63C4280',
+  '#05A2C280',
+  '#E043A780',
+  '#00B05080',
+  '#7259D680',
+  '#99D52A80',
+  '#71717880',
+  '#FFD70080',
+  '#40E0D080',
+  '#8DA4EF80',
+  '#C25D0580',
+  '#067A6F80',
+  '#CF91D880',
+  '#EB909180',
+  '#0C779280',
+  '#E38EC380',
+  '#97CF9C80',
+  '#AA99EC80',
+  '#94BA2C80',
+  '#4B4B5180',
+  '#FFE76680',
+  '#33B2A680',
+];
+
 export const COLOR_MAP = new Map<string, string[]>([
   ['blue', BLUE],
+  ['default', DEFAULT],
   ['green', GREEN],
   ['pink', PINK],
   ['red', RED],
